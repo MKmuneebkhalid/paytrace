@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Links Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #131a29;
+      --bg-card: #1a2235;
+      --border-color: #2a3650;
+      --text-primary: #f0f4fc;
+      --text-secondary: #8b9dc3;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --radius: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header h1 svg {
+      width: 32px;
+      height: 32px;
+      color: var(--accent);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-secondary);
+    }
+
+    .btn-small {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .btn-icon {
+      padding: 8px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .stat-card .label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .stat-card.pending .value { color: var(--warning); }
+    .stat-card.completed .value { color: var(--success); }
+    .stat-card.total .value { color: var(--accent); }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .card-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .filters {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .filters select {
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 16px 24px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--bg-secondary);
+    }
+
+    tr:hover td {
+      background: var(--bg-secondary);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status.pending {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+    }
+
+    .status.completed {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+    }
+
+    .status.expired {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--error);
+    }
+
+    .status.cancelled {
+      background: rgba(139, 157, 195, 0.15);
+      color: var(--text-secondary);
+    }
+
+    .status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .link-url {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    .link-url:hover {
+      text-decoration: underline;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(20px);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .modal-close:hover {
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      border-color: var(--success);
+    }
+
+    .toast.error {
+      border-color: var(--error);
+    }
+
+    @media (max-width: 768px) {
+      table {
+        display: block;
+        overflow-x: auto;
+      }
+      
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+        </svg>
+        Payment Links
+      </h1>
+      <button class="btn btn-primary" onclick="openCreateModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Create Payment Link
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card total">
+        <div class="label">Total Links</div>
+        <div class="value" id="statTotal">-</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="label">Pending</div>
+        <div class="value" id="statPending">-</div>
+      </div>
+      <div class="stat-card completed">
+        <div class="label">Completed</div>
+        <div class="value" id="statCompleted">-</div>
+      </div>
+    </div>
+
+    <!-- Links Table -->
+    <div class="card">
+      <div class="card-header">
+        <h2>All Payment Links</h2>
+        <div class="filters">
+          <select id="statusFilter" onchange="loadLinks()">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="expired">Expired</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button class="btn btn-secondary btn-small" onclick="loadLinks()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Link ID</th>
+            <th>Customer</th>
+            <th>Invoice</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="linksTable">
+          <tr>
+            <td colspan="6" class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+              </svg>
+              <p>Loading...</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Modal -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Create Payment Link</h3>
+        <button class="modal-close" onclick="closeCreateModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <form id="createForm" onsubmit="createLink(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Customer Email *</label>
+              <input type="email" name="customerEmail" required placeholder="customer@example.com">
+            </div>
+            <div class="form-group">
+              <label>Customer Name</label>
+              <input type="text" name="customerName" placeholder="John Doe">
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Customer ID (optional)</label>
+              <input type="text" name="customerId" placeholder="CUST-12345">
+            </div>
+            <div class="form-group">
+              <label>Invoice Number (optional)</label>
+              <input type="text" name="invoiceNumber" placeholder="INV-12345">
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Amount (optional)</label>
+              <input type="number" name="amount" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>Expires In (days)</label>
+              <input type="number" name="expiresInDays" value="30" min="1" max="365">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Description</label>
+            <textarea name="description" placeholder="Card on File Request"></textarea>
+          </div>
+          
+          <div class="form-group">
+            <div class="checkbox-group">
+              <input type="checkbox" name="sendEmail" id="sendEmail">
+              <label for="sendEmail" style="margin: 0;">Send email to customer immediately</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="createBtn">Create Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Link Details Modal -->
+  <div class="modal-overlay" id="detailsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Payment Link Details</h3>
+        <button class="modal-close" onclick="closeDetailsModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="detailsContent">
+        <!-- Populated dynamically -->
+      </div>
+      <div class="modal-footer" id="detailsActions">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span id="toastMessage"></span>
+  </div>
+
+  <script>
+    // Load stats
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/payment-links/stats');
+        const data = await response.json();
+        if (data.success) {
+          document.getElementById('statTotal').textContent = data.stats.total;
+          document.getElementById('statPending').textContent = data.stats.pending;
+          document.getElementById('statCompleted').textContent = data.stats.completed;
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+
+    // Load links
+    async function loadLinks() {
+      const status = document.getElementById('statusFilter').value;
+      const tbody = document.getElementById('linksTable');
+      
+      try {
+        const url = status ? `/api/payment-links?status=${status}` : '/api/payment-links';
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (!data.success || data.links.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                  <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                </svg>
+                <p>No payment links found</p>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+        
+        tbody.innerHTML = data.links.map(link => `
+          <tr>
+            <td><code style="color: var(--accent);">${link.linkId}</code></td>
+            <td>
+              <div>${link.customerName || '-'}</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">${link.customerEmail}</div>
+            </td>
+            <td>${link.invoiceNumber || '-'}</td>
+            <td><span class="status ${link.status}">${link.status}</span></td>
+            <td style="font-size: 13px; color: var(--text-secondary);">${formatDate(link.createdAt)}</td>
+            <td>
+              <div class="actions">
+                <button class="btn btn-icon btn-small" onclick="viewDetails('${link.linkId}')" title="View Details">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+                <button class="btn btn-icon btn-small" onclick="copyLink('${link.paymentUrl}')" title="Copy Link">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+                ${link.status === 'pending' ? `
+                  <button class="btn btn-icon btn-small" onclick="sendEmail('${link.linkId}')" title="Send Email">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                  </button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading links:', error);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state">
+              <p style="color: var(--error);">Error loading payment links</p>
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // Create link
+    async function createLink(e) {
+      e.preventDefault();
+      const form = e.target;
+      const btn = document.getElementById('createBtn');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+      
+      try {
+        const formData = new FormData(form);
+        const data = {
+          customerEmail: formData.get('customerEmail'),
+          customerName: formData.get('customerName') || undefined,
+          customerId: formData.get('customerId') || undefined,
+          invoiceNumber: formData.get('invoiceNumber') || undefined,
+          amount: formData.get('amount') ? parseFloat(formData.get('amount')) : undefined,
+          description: formData.get('description') || undefined,
+          expiresInDays: parseInt(formData.get('expiresInDays')) || 30,
+          sendEmail: formData.get('sendEmail') === 'on',
+        };
+        
+        const response = await fetch('/api/payment-links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          closeCreateModal();
+          form.reset();
+          loadLinks();
+          loadStats();
+          
+          // Show success with link
+          showToast(`Payment link created! ${result.emailSent ? 'Email sent.' : ''}`, 'success');
+          
+          // Copy to clipboard
+          await navigator.clipboard.writeText(result.paymentLink.paymentUrl);
+          showToast('Link copied to clipboard!', 'success');
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        showToast(error.message || 'Failed to create link', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Link';
+      }
+    }
+
+    // View details
+    async function viewDetails(linkId) {
+      try {
+        const response = await fetch(`/api/payment-links/${linkId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+        
+        const link = data.paymentLink;
+        
+        document.getElementById('detailsContent').innerHTML = `
+          <div style="display: grid; gap: 16px;">
+            <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px;">
+              <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Payment URL</div>
+              <div style="font-family: monospace; font-size: 13px; word-break: break-all; color: var(--accent);">
+                <a href="${link.paymentUrl}" target="_blank">${link.paymentUrl}</a>
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Status</div>
+                <div><span class="status ${link.status}">${link.status}</span></div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Link ID</div>
+                <div style="font-family: monospace;">${link.linkId}</div>
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Customer Name</div>
+                <div>${link.customerName || '-'}</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Customer Email</div>
+                <div>${link.customerEmail}</div>
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Customer ID</div>
+                <div>${link.customerId || '-'}</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Invoice</div>
+                <div>${link.invoiceNumber || '-'}</div>
+              </div>
+            </div>
+            
+            ${link.amount ? `
+            <div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Amount</div>
+              <div style="font-size: 20px; font-weight: 600; color: var(--success);">$${link.amount.toFixed(2)}</div>
+            </div>
+            ` : ''}
+            
+            ${link.description ? `
+            <div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Description</div>
+              <div>${link.description}</div>
+            </div>
+            ` : ''}
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Created</div>
+                <div style="font-size: 13px;">${formatDate(link.createdAt)}</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Expires</div>
+                <div style="font-size: 13px;">${formatDate(link.expiresAt)}</div>
+              </div>
+            </div>
+            
+            ${link.emailSentAt ? `
+            <div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Email Sent</div>
+              <div style="font-size: 13px;">${formatDate(link.emailSentAt)}</div>
+            </div>
+            ` : ''}
+            
+            ${link.status === 'completed' ? `
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); padding: 16px; border-radius: 8px;">
+              <div style="font-size: 12px; color: var(--success); margin-bottom: 4px;">Completed</div>
+              <div style="font-weight: 600;">Card: ${link.maskedCardNumber || 'xxxx-xxxx-xxxx-xxxx'}</div>
+              <div style="font-size: 13px; margin-top: 4px;">${formatDate(link.completedAt)}</div>
+            </div>
+            ` : ''}
+          </div>
+        `;
+        
+        let actions = `
+          <button class="btn btn-secondary" onclick="copyLink('${link.paymentUrl}')">Copy Link</button>
+        `;
+        
+        if (link.status === 'pending') {
+          actions += `
+            <button class="btn btn-secondary" onclick="sendEmail('${link.linkId}')">Send Email</button>
+            <button class="btn btn-secondary" style="color: var(--error);" onclick="cancelLink('${link.linkId}')">Cancel</button>
+          `;
+        }
+        
+        actions += `<button class="btn btn-primary" onclick="closeDetailsModal()">Close</button>`;
+        
+        document.getElementById('detailsActions').innerHTML = actions;
+        document.getElementById('detailsModal').classList.add('active');
+      } catch (error) {
+        showToast(error.message || 'Failed to load details', 'error');
+      }
+    }
+
+    // Send email
+    async function sendEmail(linkId) {
+      try {
+        const response = await fetch(`/api/payment-links/${linkId}/send-email`, {
+          method: 'POST',
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          showToast('Email sent successfully!', 'success');
+          loadLinks();
+        } else {
+          throw new Error(data.error);
+        }
+      } catch (error) {
+        showToast(error.message || 'Failed to send email', 'error');
+      }
+    }
+
+    // Cancel link
+    async function cancelLink(linkId) {
+      if (!confirm('Are you sure you want to cancel this payment link?')) return;
+      
+      try {
+        const response = await fetch(`/api/payment-links/${linkId}/cancel`, {
+          method: 'POST',
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          showToast('Payment link cancelled', 'success');
+          closeDetailsModal();
+          loadLinks();
+          loadStats();
+        } else {
+          throw new Error(data.error);
+        }
+      } catch (error) {
+        showToast(error.message || 'Failed to cancel link', 'error');
+      }
+    }
+
+    // Copy link
+    async function copyLink(url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('Link copied to clipboard!', 'success');
+      } catch (error) {
+        showToast('Failed to copy link', 'error');
+      }
+    }
+
+    // Modals
+    function openCreateModal() {
+      document.getElementById('createModal').classList.add('active');
+    }
+
+    function closeCreateModal() {
+      document.getElementById('createModal').classList.remove('active');
+    }
+
+    function closeDetailsModal() {
+      document.getElementById('detailsModal').classList.remove('active');
+    }
+
+    // Toast
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      
+      toast.className = `toast ${type}`;
+      toastMessage.textContent = message;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Format date
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('active');
+        }
+      });
+    });
+
+    // Initialize
+    loadStats();
+    loadLinks();
+  </script>
+</body>
+</html>

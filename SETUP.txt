@@ -1,0 +1,111 @@
+PayTrace Card-on-File Integration
+==================================
+
+SETUP STEPS
+-----------
+
+1. Install dependencies:
+   npm install
+
+2. Create .env file from env.example:
+   cp env.example .env
+
+3. Fill in your PayTrace credentials in .env:
+   - PAYTRACE_API_URL: Use sandbox URL for testing, production URL for live
+   - PAYTRACE_USERNAME: Your PayTrace API username
+   - PAYTRACE_PASSWORD: Your PayTrace API password
+   - PAYTRACE_INTEGRATOR_ID: Your assigned integrator ID
+
+4. (Optional) Configure email settings for sending payment links:
+   - EMAIL_HOST: SMTP server (default: smtp.gmail.com)
+   - EMAIL_PORT: SMTP port (default: 587)
+   - EMAIL_USER: Your email address
+   - EMAIL_PASS: Your email password
+   - EMAIL_FROM: Display name and email for sent emails
+   
+   ⚠️ IMPORTANT FOR GMAIL USERS:
+   You MUST use a Google App Password, NOT your regular Gmail password!
+   
+   Steps to generate a Google App Password:
+   a) Go to https://myaccount.google.com/
+   b) Navigate to Security → 2-Step Verification (enable it first if needed)
+   c) Scroll down and click on "App passwords"
+   d) Select "Mail" for app and "Other" for device
+   e) Enter a name like "PayTrace App" and click Generate
+   f) Copy the 16-character password (remove spaces)
+   g) Use that password in EMAIL_PASS in your .env file
+
+5. Run the server:
+   npm run dev    (development with auto-reload)
+   npm start      (production)
+
+6. Open http://localhost:3000 in your browser
+
+
+GETTING PAYTRACE CREDENTIALS
+----------------------------
+
+1. Log into your PayTrace merchant dashboard
+2. Go to Settings > API Credentials
+3. Generate/copy your username and password
+4. Request an Integrator ID from PayTrace support if you don't have one
+
+Sandbox URLs:
+- API: https://api.sandbox.paytrace.com
+- Documentation: https://developers.paytrace.com
+
+Production URLs:
+- API: https://api.paytrace.com
+
+
+API ENDPOINTS
+-------------
+
+GET  /api/protect-key           - Get client key for Protect.js initialization
+POST /api/customers             - Create new customer profile with card on file
+GET  /api/customers/:id         - Get customer profile details
+PUT  /api/customers/:id         - Update customer card/billing info
+DELETE /api/customers/:id       - Delete customer profile
+
+
+HOW IT WORKS
+------------
+
+1. Client visits the secure form page
+2. Page loads PayTrace Protect.js (hosted payment fields via iframe)
+3. Card number and CVV are entered into PayTrace-hosted fields
+4. When submitted, Protect.js encrypts and returns a one-time token (hpf_token)
+5. Your server receives only the token, never the raw card data
+6. Server calls PayTrace API to create customer profile in their vault
+7. PayTrace returns customer_id and masked card number
+8. You store customer_id (not card data) for future reference
+
+This keeps you PCI-compliant (SAQ-A level) since card data never touches your servers.
+
+
+FUTURE TRANSACTIONS
+-------------------
+
+When you need to charge a stored card later:
+
+POST /v1/transactions/sale/by_customer
+{
+  "integrator_id": "your_integrator_id",
+  "customer_id": "the_stored_customer_id",
+  "amount": 100.00
+}
+
+This functionality can be added to the service when needed.
+
+
+NEXT STEPS (ZOHO INTEGRATION)
+-----------------------------
+
+For Zoho Sign integration, you'll need to:
+
+1. Set up a Zoho Sign webhook that triggers when a contract is sent
+2. The webhook will call your API with client info
+3. Your API generates a unique link to the card collection form
+4. That link gets sent to the client (via email or embedded in Zoho workflow)
+5. Client fills out form, card is saved to PayTrace vault
+6. You store the mapping: Zoho Contact ID -> PayTrace Customer ID

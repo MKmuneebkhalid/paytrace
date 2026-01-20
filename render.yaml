@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: paytrace-app
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PAYTRACE_API_URL
+        sync: false
+      - key: PAYTRACE_USERNAME
+        sync: false
+      - key: PAYTRACE_PASSWORD
+        sync: false
+      - key: PAYTRACE_INTEGRATOR_ID
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
