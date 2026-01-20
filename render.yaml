@@ -15,15 +15,11 @@ services:
         sync: false
       - key: PAYTRACE_INTEGRATOR_ID
         sync: false
-      - key: EMAIL_HOST
-        sync: false
-      - key: EMAIL_PORT
-        sync: false
-      - key: EMAIL_USER
-        sync: false
-      - key: EMAIL_PASS
+      - key: SENDGRID_API_KEY
         sync: false
       - key: EMAIL_FROM
+        sync: false
+      - key: APP_URL
         sync: false
     disk:
       name: data

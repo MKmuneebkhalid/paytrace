@@ -1,51 +1,28 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
 // Email configuration from environment variables
-const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.gmail.com';
-const EMAIL_PORT = process.env.EMAIL_PORT || 587;
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER;
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const EMAIL_FROM = process.env.EMAIL_FROM;
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
-// Create transporter (only if email is configured)
-let transporter = null;
-
-function getTransporter() {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    return null;
-  }
-  
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: EMAIL_HOST,
-      port: parseInt(EMAIL_PORT),
-      secure: EMAIL_PORT === '465',
-      auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-      },
-    });
-  }
-  
-  return transporter;
+// Initialize SendGrid
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
 }
 
 /**
  * Check if email is configured
  */
 export function isEmailConfigured() {
-  return !!(EMAIL_USER && EMAIL_PASS);
+  return !!(SENDGRID_API_KEY && EMAIL_FROM);
 }
 
 /**
  * Send payment link email to customer
  */
 export async function sendPaymentLinkEmail(paymentLink) {
-  const transport = getTransporter();
-  
-  if (!transport) {
-    throw new Error('Email is not configured. Set EMAIL_USER and EMAIL_PASS environment variables.');
+  if (!SENDGRID_API_KEY || !EMAIL_FROM) {
+    throw new Error('Email is not configured. Set SENDGRID_API_KEY and EMAIL_FROM environment variables.');
   }
   
   const paymentUrl = `${APP_URL}/pay/${paymentLink.linkId}`;
@@ -165,33 +142,27 @@ Your payment information is encrypted and secure.
 Powered by PayTrace
   `;
   
-  const mailOptions = {
-    from: EMAIL_FROM,
+  const msg = {
     to: paymentLink.customerEmail,
+    from: EMAIL_FROM,
     subject: `Secure Payment Request${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
     text: textContent,
     html: htmlContent,
   };
   
   try {
-    const result = await transport.sendMail(mailOptions);
+    const result = await sgMail.send(msg);
     
     return {
       success: true,
-      messageId: result.messageId,
+      messageId: result[0].headers['x-message-id'],
       to: paymentLink.customerEmail,
     };
   } catch (error) {
-    // Provide helpful error messages for common Gmail authentication issues
-    if (error.message.includes('Invalid login') || 
-        error.message.includes('Username and Password not accepted') ||
-        error.message.includes('Application-specific password required') ||
-        error.message.includes('InvalidSecondFactor')) {
-      throw new Error(
-        'Gmail authentication failed. You must use a Google App Password, not your regular Gmail password. ' +
-        'Go to https://myaccount.google.com/ → Security → 2-Step Verification → App passwords to generate one. ' +
-        'See .env.example for detailed instructions.'
-      );
+    // Provide helpful error messages for common SendGrid issues
+    if (error.response) {
+      const errorMsg = error.response.body.errors?.[0]?.message || error.message;
+      throw new Error(`SendGrid error: ${errorMsg}`);
     }
     
     // Re-throw other errors as-is
@@ -203,9 +174,7 @@ Powered by PayTrace
  * Send payment confirmation email
  */
 export async function sendPaymentConfirmationEmail(paymentLink) {
-  const transport = getTransporter();
-  
-  if (!transport) {
+  if (!SENDGRID_API_KEY || !EMAIL_FROM) {
     // Silently skip if email not configured
     return null;
   }
@@ -275,16 +244,16 @@ export async function sendPaymentConfirmationEmail(paymentLink) {
 </html>
   `;
   
-  const mailOptions = {
-    from: EMAIL_FROM,
+  const msg = {
     to: paymentLink.customerEmail,
+    from: EMAIL_FROM,
     subject: `Card Saved Successfully${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
     html: htmlContent,
   };
   
   try {
-    const result = await transport.sendMail(mailOptions);
-    return { success: true, messageId: result.messageId };
+    const result = await sgMail.send(msg);
+    return { success: true, messageId: result[0].headers['x-message-id'] };
   } catch (error) {
     console.error('Failed to send confirmation email:', error.message);
     return null;
