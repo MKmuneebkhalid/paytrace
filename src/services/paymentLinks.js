@@ -41,6 +41,7 @@ export function createPaymentLink({
   amount,
   description,
   expiresInDays = 30,
+  ownerEmail,
 }) {
   const data = readData();
   
@@ -62,6 +63,7 @@ export function createPaymentLink({
     completedAt: null,
     emailSentAt: null,
     maskedCardNumber: null,
+    ownerEmail: ownerEmail || null,
   };
   
   data.links.push(paymentLink);

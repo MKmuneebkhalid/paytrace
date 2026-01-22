@@ -22,6 +22,7 @@ import {
 import {
   sendPaymentLinkEmail,
   sendPaymentConfirmationEmail,
+  sendOwnerNotificationEmail,
   isEmailConfigured,
 } from './services/email.js';
 
@@ -45,7 +46,7 @@ app.use(express.static(path.join(__dirname, '../public')));
  */
 app.post('/api/payment-links', async (req, res) => {
   try {
-    const { customerEmail, customerName, customerId, invoiceNumber, amount, description, expiresInDays, sendEmail } = req.body;
+    const { customerEmail, customerName, customerId, invoiceNumber, amount, description, expiresInDays, sendEmail, ownerEmail } = req.body;
     
     if (!customerEmail) {
       return res.status(400).json({ error: 'customerEmail is required' });
@@ -60,6 +61,7 @@ app.post('/api/payment-links', async (req, res) => {
       amount,
       description,
       expiresInDays,
+      ownerEmail,
     });
     
     // Generate the full URL
@@ -353,10 +355,17 @@ app.post('/api/pay/:linkId', async (req, res) => {
       paytraceCustId: result.customerId,
     });
     
-    // Send confirmation email (non-blocking)
+    // Send confirmation email to customer (non-blocking)
     sendPaymentConfirmationEmail(updatedLink).catch(err => {
       console.error('Failed to send confirmation email:', err.message);
     });
+    
+    // Send notification email to owner (non-blocking)
+    if (updatedLink.ownerEmail) {
+      sendOwnerNotificationEmail(updatedLink, updatedLink.ownerEmail).catch(err => {
+        console.error('Failed to send owner notification email:', err.message);
+      });
+    }
     
     res.json({
       success: true,
@@ -408,6 +417,9 @@ app.post('/api/webhooks/zoho-sign', async (req, res) => {
     const customerName = signerAction.recipient_name;
     const documentName = requests.document_ids?.[0]?.document_name || 'Document';
     
+    // Extract owner email (the person who sent the document)
+    const ownerEmail = requests.owner_email || null;
+    
     if (!customerEmail) {
       return res.status(200).json({ received: true, message: 'No email found' });
     }
@@ -419,6 +431,7 @@ app.post('/api/webhooks/zoho-sign', async (req, res) => {
       invoiceNumber: requests.request_id,
       description: `Card on File - ${documentName}`,
       expiresInDays: 30,
+      ownerEmail,
     });
     
     // Send email if configured
