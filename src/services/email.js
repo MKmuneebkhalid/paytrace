@@ -30,6 +30,13 @@ export async function sendPaymentLinkEmail(paymentLink) {
     throw new Error('Email is not configured. Set SENDGRID_API_KEY and EMAIL_FROM environment variables.');
   }
   
+  // Use owner's email as "from" if available, otherwise use default EMAIL_FROM
+  const fromEmail = paymentLink.ownerEmail || EMAIL_FROM;
+  
+  if (paymentLink.ownerEmail) {
+    console.log(`📧 Sending payment link email from owner: ${fromEmail}`);
+  }
+  
   const paymentUrl = `${APP_URL}/pay/${paymentLink.linkId}`;
   
   const htmlContent = `
@@ -149,7 +156,7 @@ Powered by PayTrace
   
   const msg = {
     to: paymentLink.customerEmail,
-    from: EMAIL_FROM,
+    from: fromEmail,
     subject: `Secure Payment Request${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
     text: textContent,
     html: htmlContent,
@@ -317,6 +324,13 @@ export async function sendPaymentConfirmationEmail(paymentLink) {
     return null;
   }
   
+  // Use owner's email as "from" if available, otherwise use default EMAIL_FROM
+  const fromEmail = paymentLink.ownerEmail || EMAIL_FROM;
+  
+  if (paymentLink.ownerEmail) {
+    console.log(`📧 Sending confirmation email from owner: ${fromEmail}`);
+  }
+  
   const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -384,7 +398,7 @@ export async function sendPaymentConfirmationEmail(paymentLink) {
   
   const msg = {
     to: paymentLink.customerEmail,
-    from: EMAIL_FROM,
+    from: fromEmail,
     subject: `Card Saved Successfully${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
     html: htmlContent,
   };
