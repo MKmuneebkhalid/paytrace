@@ -5,6 +5,11 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM;
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
+// Additional notification emails (comma-separated)
+const NOTIFICATION_EMAILS = process.env.NOTIFICATION_EMAILS 
+  ? process.env.NOTIFICATION_EMAILS.split(',').map(email => email.trim()).filter(Boolean)
+  : [];
+
 // Initialize SendGrid
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -174,8 +179,29 @@ Powered by PayTrace
  * Send owner notification email when a card is saved
  */
 export async function sendOwnerNotificationEmail(paymentLink, ownerEmail) {
-  if (!SENDGRID_API_KEY || !EMAIL_FROM || !ownerEmail) {
-    // Silently skip if email not configured or no owner email
+  if (!SENDGRID_API_KEY || !EMAIL_FROM) {
+    // Silently skip if email not configured
+    return null;
+  }
+  
+  // Collect all recipient emails
+  const recipients = [];
+  
+  // Add the primary owner email if provided
+  if (ownerEmail) {
+    recipients.push(ownerEmail);
+  }
+  
+  // Add additional notification emails from environment variable
+  if (NOTIFICATION_EMAILS.length > 0) {
+    recipients.push(...NOTIFICATION_EMAILS);
+  }
+  
+  // Remove duplicates
+  const uniqueRecipients = [...new Set(recipients)];
+  
+  if (uniqueRecipients.length === 0) {
+    // No recipients configured
     return null;
   }
   
@@ -262,7 +288,7 @@ export async function sendOwnerNotificationEmail(paymentLink, ownerEmail) {
   `;
   
   const msg = {
-    to: ownerEmail,
+    to: uniqueRecipients,
     from: EMAIL_FROM,
     subject: `New Card Saved - ${paymentLink.customerName || paymentLink.customerEmail}${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
     html: htmlContent,
@@ -270,7 +296,12 @@ export async function sendOwnerNotificationEmail(paymentLink, ownerEmail) {
   
   try {
     const result = await sgMail.send(msg);
-    return { success: true, messageId: result[0].headers['x-message-id'] };
+    console.log(`✅ Owner notification sent to ${uniqueRecipients.length} recipient(s): ${uniqueRecipients.join(', ')}`);
+    return { 
+      success: true, 
+      messageId: result[0].headers['x-message-id'],
+      recipients: uniqueRecipients,
+    };
   } catch (error) {
     console.error('Failed to send owner notification email:', error.message);
     return null;
