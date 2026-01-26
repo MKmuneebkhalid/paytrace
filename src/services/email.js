@@ -1,8 +1,8 @@
-import sgMail from '@sendgrid/mail';
+import { Resend } from 'resend';
 
 // Email configuration from environment variables
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev'; // Resend provides default
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
 // Additional notification emails (comma-separated)
@@ -10,24 +10,25 @@ const NOTIFICATION_EMAILS = process.env.NOTIFICATION_EMAILS
   ? process.env.NOTIFICATION_EMAILS.split(',').map(email => email.trim()).filter(Boolean)
   : [];
 
-// Initialize SendGrid
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
+// Initialize Resend
+let resend = null;
+if (RESEND_API_KEY) {
+  resend = new Resend(RESEND_API_KEY);
 }
 
 /**
  * Check if email is configured
  */
 export function isEmailConfigured() {
-  return !!(SENDGRID_API_KEY && EMAIL_FROM);
+  return !!RESEND_API_KEY;
 }
 
 /**
  * Send payment link email to customer
  */
 export async function sendPaymentLinkEmail(paymentLink) {
-  if (!SENDGRID_API_KEY || !EMAIL_FROM) {
-    throw new Error('Email is not configured. Set SENDGRID_API_KEY and EMAIL_FROM environment variables.');
+  if (!RESEND_API_KEY) {
+    throw new Error('Email is not configured. Set RESEND_API_KEY environment variable.');
   }
   
   // Use owner's email as "from" if available, otherwise use default EMAIL_FROM
@@ -154,31 +155,22 @@ Your payment information is encrypted and secure.
 Powered by PayTrace
   `;
   
-  const msg = {
-    to: paymentLink.customerEmail,
-    from: fromEmail,
-    subject: `Secure Payment Request${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
-    text: textContent,
-    html: htmlContent,
-  };
-  
   try {
-    const result = await sgMail.send(msg);
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: paymentLink.customerEmail,
+      subject: `Secure Payment Request${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
+      html: htmlContent,
+      text: textContent,
+    });
     
     return {
       success: true,
-      messageId: result[0].headers['x-message-id'],
+      messageId: result.id,
       to: paymentLink.customerEmail,
     };
   } catch (error) {
-    // Provide helpful error messages for common SendGrid issues
-    if (error.response) {
-      const errorMsg = error.response.body.errors?.[0]?.message || error.message;
-      throw new Error(`SendGrid error: ${errorMsg}`);
-    }
-    
-    // Re-throw other errors as-is
-    throw error;
+    throw new Error(`Email error: ${error.message}`);
   }
 }
 
@@ -186,31 +178,16 @@ Powered by PayTrace
  * Send owner notification email when a card is saved
  */
 export async function sendOwnerNotificationEmail(paymentLink, ownerEmail) {
-  if (!SENDGRID_API_KEY || !EMAIL_FROM) {
-    // Silently skip if email not configured
+  if (!RESEND_API_KEY) {
     return null;
   }
   
-  // Collect all recipient emails
   const recipients = [];
-  
-  // Add the primary owner email if provided
-  if (ownerEmail) {
-    recipients.push(ownerEmail);
-  }
-  
-  // Add additional notification emails from environment variable
-  if (NOTIFICATION_EMAILS.length > 0) {
-    recipients.push(...NOTIFICATION_EMAILS);
-  }
-  
-  // Remove duplicates
+  if (ownerEmail) recipients.push(ownerEmail);
+  if (NOTIFICATION_EMAILS.length > 0) recipients.push(...NOTIFICATION_EMAILS);
   const uniqueRecipients = [...new Set(recipients)];
   
-  if (uniqueRecipients.length === 0) {
-    // No recipients configured
-    return null;
-  }
+  if (uniqueRecipients.length === 0) return null;
   
   const htmlContent = `
 <!DOCTYPE html>
@@ -294,19 +271,18 @@ export async function sendOwnerNotificationEmail(paymentLink, ownerEmail) {
 </html>
   `;
   
-  const msg = {
-    to: uniqueRecipients,
-    from: EMAIL_FROM,
-    subject: `New Card Saved - ${paymentLink.customerName || paymentLink.customerEmail}${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
-    html: htmlContent,
-  };
-  
   try {
-    const result = await sgMail.send(msg);
+    const result = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: uniqueRecipients,
+      subject: `New Card Saved - ${paymentLink.customerName || paymentLink.customerEmail}${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
+      html: htmlContent,
+    });
+    
     console.log(`✅ Owner notification sent to ${uniqueRecipients.length} recipient(s): ${uniqueRecipients.join(', ')}`);
     return { 
       success: true, 
-      messageId: result[0].headers['x-message-id'],
+      messageId: result.id,
       recipients: uniqueRecipients,
     };
   } catch (error) {
@@ -319,12 +295,10 @@ export async function sendOwnerNotificationEmail(paymentLink, ownerEmail) {
  * Send payment confirmation email
  */
 export async function sendPaymentConfirmationEmail(paymentLink) {
-  if (!SENDGRID_API_KEY || !EMAIL_FROM) {
-    // Silently skip if email not configured
+  if (!RESEND_API_KEY) {
     return null;
   }
   
-  // Use owner's email as "from" if available, otherwise use default EMAIL_FROM
   const fromEmail = paymentLink.ownerEmail || EMAIL_FROM;
   
   if (paymentLink.ownerEmail) {
@@ -396,16 +370,15 @@ export async function sendPaymentConfirmationEmail(paymentLink) {
 </html>
   `;
   
-  const msg = {
-    to: paymentLink.customerEmail,
-    from: fromEmail,
-    subject: `Card Saved Successfully${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
-    html: htmlContent,
-  };
-  
   try {
-    const result = await sgMail.send(msg);
-    return { success: true, messageId: result[0].headers['x-message-id'] };
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: paymentLink.customerEmail,
+      subject: `Card Saved Successfully${paymentLink.invoiceNumber ? ` - ${paymentLink.invoiceNumber}` : ''}`,
+      html: htmlContent,
+    });
+    
+    return { success: true, messageId: result.id };
   } catch (error) {
     console.error('Failed to send confirmation email:', error.message);
     return null;
