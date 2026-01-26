@@ -16,24 +16,29 @@ SETUP STEPS
    - PAYTRACE_PASSWORD: Your PayTrace API password
    - PAYTRACE_INTEGRATOR_ID: Your assigned integrator ID
 
-4. (Optional) Configure email settings for sending payment links:
-   - EMAIL_HOST: SMTP server (default: smtp.gmail.com)
-   - EMAIL_PORT: SMTP port (default: 587)
-   - EMAIL_USER: Your email address
-   - EMAIL_PASS: Your email password
+4. (Optional) Configure SendGrid for sending payment links:
+   - SENDGRID_API_KEY: Your SendGrid API key (starts with "SG.")
    - EMAIL_FROM: Display name and email for sent emails
+   - NOTIFICATION_EMAILS: (Optional) Comma-separated list for notifications
    
-   ⚠️ IMPORTANT FOR GMAIL USERS:
-   You MUST use a Google App Password, NOT your regular Gmail password!
+   ⚠️ SENDGRID SETUP STEPS:
    
-   Steps to generate a Google App Password:
-   a) Go to https://myaccount.google.com/
-   b) Navigate to Security → 2-Step Verification (enable it first if needed)
-   c) Scroll down and click on "App passwords"
-   d) Select "Mail" for app and "Other" for device
-   e) Enter a name like "PayTrace App" and click Generate
-   f) Copy the 16-character password (remove spaces)
-   g) Use that password in EMAIL_PASS in your .env file
+   a) Sign up for free at https://sendgrid.com (100 emails/day free)
+   b) Verify your email address
+   c) Go to Settings → API Keys in SendGrid dashboard
+   d) Click "Create API Key"
+   e) Name it "PayTrace App" and select "Full Access"
+   f) Copy the API key (you won't see it again!)
+   g) Add to .env: SENDGRID_API_KEY=SG.your-key-here
+   
+   h) IMPORTANT - Verify sender emails:
+      - Go to Settings → Sender Authentication
+      - Click "Verify a Single Sender"
+      - Add and verify each email you'll send from
+      - This includes the EMAIL_FROM and any Zoho account owner emails
+   
+   💡 TIP: The app works without email configured - it will just skip sending.
+        Payment links can still be copied and shared manually from the admin panel.
 
 5. Run the server:
    npm run dev    (development with auto-reload)
