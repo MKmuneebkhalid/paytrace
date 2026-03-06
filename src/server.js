@@ -415,7 +415,8 @@ app.post('/api/webhooks/zoho-sign', async (req, res) => {
     
     const customerEmail = signerAction.recipient_email;
     const customerName = signerAction.recipient_name;
-    const documentName = requests.document_ids?.[0]?.document_name || 'Document';
+    const requestName = requests.request_name || '';
+    const documentName = requests.document_ids?.[0]?.document_name || requestName || 'Document';
     
     const PAYMENT_TRIGGER_DOCUMENTS = [
       '2025 JL Closets Contract - HO',
@@ -426,11 +427,11 @@ app.post('/api/webhooks/zoho-sign', async (req, res) => {
     ];
     
     const matchesPaymentDoc = PAYMENT_TRIGGER_DOCUMENTS.some(name =>
-      documentName.toLowerCase().includes(name.toLowerCase())
+      requestName.toLowerCase().includes(name.toLowerCase())
     );
     
     if (!matchesPaymentDoc) {
-      console.log(`⏭️ Skipping non-payment document: "${documentName}"`);
+      console.log(`⏭️ Skipping non-payment document: "${requestName}"`);
       return res.status(200).json({ received: true, message: 'Document does not require payment link' });
     }
     
