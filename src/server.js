@@ -417,6 +417,23 @@ app.post('/api/webhooks/zoho-sign', async (req, res) => {
     const customerName = signerAction.recipient_name;
     const documentName = requests.document_ids?.[0]?.document_name || 'Document';
     
+    const PAYMENT_TRIGGER_DOCUMENTS = [
+      '2025 JL Closets Contract - HO',
+      '2025 JL Closets Trade Contract - BUILDERS',
+      '2025 JL Closets Change Order-Add On',
+      '2025 JL Closets Retainer Agreement',
+      'Service',
+    ];
+    
+    const matchesPaymentDoc = PAYMENT_TRIGGER_DOCUMENTS.some(name =>
+      documentName.toLowerCase().includes(name.toLowerCase())
+    );
+    
+    if (!matchesPaymentDoc) {
+      console.log(`⏭️ Skipping non-payment document: "${documentName}"`);
+      return res.status(200).json({ received: true, message: 'Document does not require payment link' });
+    }
+    
     // Extract owner email (the person who sent the document)
     const ownerEmail = requests.owner_email || null;
     
